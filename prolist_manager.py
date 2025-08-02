@@ -45,7 +45,7 @@ from .config_manager import (
 # repository name with your own GitHub account and repository that
 # hosts the JSON file.  The file should be publicly accessible.
 PRO_LIST_URL = (
-    "https://raw.githubusercontent.com/yourusername/RaceMatesProDrivers/main/prodrivers.json"
+    "https://raw.githubusercontent.com/CodeJawn/racemates/refs/heads/main/pro_drivers/prodrivers.json"
 )
 
 PRO_CACHE_FILENAME = "pro_drivers_cache.json"
