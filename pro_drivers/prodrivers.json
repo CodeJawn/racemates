@@ -7,5 +7,6 @@
     {"UserID": 168966, "Name": "Max Verstappen", "Description": "F1"},
     {"UserID": 371595, "Name": "Ollie Bearman", "Description": "F1"},
     {"UserID": 60144, "Name": "Oscar Piastri", "Description": "F1"},
-    {"UserID": 79787, "Name": "Zak Brown", "Description": "McLaren F1 CEO"}
+    {"UserID": 79787, "Name": "Zak Brown", "Description": "McLaren F1 CEO"},
+    {"UserID": 350527, "Name": "Random User", "Description": "Test account"}
   ]
