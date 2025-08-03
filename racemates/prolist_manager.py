@@ -41,9 +41,12 @@ from .config_manager import (
     _ensure_config_dir,
 )
 
-# Remote location of the pro driver list.  Replace "username" and
-# repository name with your own GitHub account and repository that
-# hosts the JSON file.  The file should be publicly accessible.
+# Remote location of the pro driver list.
+#
+# You can host the JSON file in any web‑accessible location.  RaceMates
+# will download the file once per day and cache it locally.  The
+# default points at a GitHub raw URL maintained by the application
+# author.  Feel free to replace this with your own list.
 PRO_LIST_URL = (
     "https://raw.githubusercontent.com/CodeJawn/racemates/refs/heads/main/pro_drivers/prodrivers.json"
 )
