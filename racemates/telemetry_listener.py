@@ -18,7 +18,7 @@ from __future__ import annotations
 import logging
 import threading
 import time
-from typing import List, Dict
+from typing import List, Dict, Any
 
 from PySide6.QtCore import QObject, Signal
 
@@ -39,7 +39,7 @@ logger = logging.getLogger(__name__)
 class TelemetryListener(QObject):
     """Monitor iRacing telemetry and emit driver updates."""
 
-    drivers_updated = Signal(list)  # List[Dict[str, object]]
+    drivers_updated = Signal(list)  # List[Dict[str, Any]]
     session_active = Signal(bool)  # bool indicating whether the overlay should be shown
 
     def __init__(self, poll_interval: float = 0.2) -> None:
@@ -59,7 +59,9 @@ class TelemetryListener(QObject):
         if self._running:
             return
         self._running = True
-        self._thread = threading.Thread(target=self._run, name="TelemetryListener", daemon=True)
+        self._thread = threading.Thread(
+            target=self._run, name="TelemetryListener", daemon=True
+        )
         self._thread.start()
 
     def stop(self) -> None:
@@ -102,22 +104,28 @@ class TelemetryListener(QObject):
                     # Fetch the list of drivers in session
                     try:
                         driver_info = self.ir["DriverInfo"]
-                        drivers = driver_info.get("Drivers", []) if isinstance(driver_info, dict) else []
+                        drivers = (
+                            driver_info.get("Drivers", [])
+                            if isinstance(driver_info, dict)
+                            else []
+                        )
                     except Exception as e:
                         logger.error("Error reading DriverInfo: %s", e)
                         drivers = []
 
                     pro_map = get_pro_list()
-                    pro_drivers: List[Dict[str, object]] = []
+                    pro_drivers: List[Dict[str, Any]] = []
                     for drv in drivers:
                         try:
                             uid = int(drv.get("UserID"))
                             # Only include drivers present in our pro list
                             if uid in pro_map:
+                                entry = pro_map[uid]
                                 pro_drivers.append(
                                     {
                                         "UserID": uid,
-                                        "Name": pro_map[uid],
+                                        "Name": entry.get("Name", ""),
+                                        "Description": entry.get("Description", ""),
                                         "CarNumber": drv.get("CarNumber", ""),
                                     }
                                 )

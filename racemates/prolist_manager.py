@@ -4,19 +4,21 @@ Pro driver list management.
 This module is responsible for downloading and caching the list of
 professional drivers.  The list is expected to be provided as a JSON
 array of objects, where each object contains at least ``UserID`` (an
-integer) and ``Name`` (a string).  The remote list is retrieved
-periodically (default: once per day) and stored locally so that the
-application continues to function when offline.
+integer), ``Name`` (a string) and optionally ``Description`` (a
+short string identifying the series or pedigree of the driver).  The
+remote list is retrieved periodically (default: once per day) and
+stored locally so that the application continues to function when
+offline.
 
-The remote URL should be set via the ``PRO_LIST_URL`` constant.  By
-default it points to a placeholder GitHub raw URL; update this value
-to point at the actual JSON file once it has been created.  The
-structure of the JSON file should resemble:
+The remote URL should be set via the ``PRO_LIST_URL`` constant.  It
+points to a GitHub raw URL by default; update this value to point at
+the actual JSON file once it has been created.  The structure of the
+JSON file should resemble:
 
 ```
 [
-  {"UserID": 123456, "Name": "John Doe"},
-  {"UserID": 789012, "Name": "Jane Smith"},
+  {"UserID": 123456, "Name": "John Doe", "Description": "F1"},
+  {"UserID": 789012, "Name": "Jane Smith", "Description": "Nascar"},
   ...
 ]
 ```
@@ -31,7 +33,7 @@ from __future__ import annotations
 import json
 import time
 from pathlib import Path
-from typing import Dict
+from typing import Dict, Any
 
 import requests
 
@@ -59,11 +61,14 @@ def _get_cache_path() -> Path:
     return _ensure_config_dir() / PRO_CACHE_FILENAME
 
 
-def _read_cache() -> Dict[int, str]:
+def _read_cache() -> Dict[int, Dict[str, Any]]:
     """Read the cached pro driver list.
 
-    Returns a dictionary mapping ``UserID`` to ``Name``.  If the cache
-    file does not exist or cannot be parsed, an empty dict is returned.
+    Returns a dictionary mapping ``UserID`` to a mapping with
+    ``Name`` and ``Description``.  Older cache files that map IDs to
+    just a string (name) are converted on the fly to include an empty
+    description.  If the cache file does not exist or cannot be
+    parsed, an empty dict is returned.
     """
     path = _get_cache_path()
     if not path.exists():
@@ -71,14 +76,27 @@ def _read_cache() -> Dict[int, str]:
     try:
         with path.open("r", encoding="utf-8") as f:
             data = json.load(f)
-        # Ensure keys are integers
-        return {int(k): str(v) for k, v in data.items()}
+        pro_map: Dict[int, Dict[str, Any]] = {}
+        for k, v in data.items():
+            uid = int(k)
+            if isinstance(v, dict):
+                name = str(v.get("Name", ""))
+                desc = str(v.get("Description", ""))
+                pro_map[uid] = {"Name": name, "Description": desc}
+            else:
+                # Legacy format: value is the name string
+                pro_map[uid] = {"Name": str(v), "Description": ""}
+        return pro_map
     except Exception:
         return {}
 
 
-def _write_cache(pro_map: Dict[int, str]) -> None:
-    """Write the pro driver map to the cache file."""
+def _write_cache(pro_map: Dict[int, Dict[str, Any]]) -> None:
+    """Write the pro driver map to the cache file.
+
+    The cache stores a mapping of ``UserID`` (string keys) to a
+    dictionary with ``Name`` and ``Description``.
+    """
     path = _get_cache_path()
     try:
         with path.open("w", encoding="utf-8") as f:
@@ -87,23 +105,24 @@ def _write_cache(pro_map: Dict[int, str]) -> None:
         pass
 
 
-def fetch_and_cache_pro_list() -> Dict[int, str]:
+def fetch_and_cache_pro_list() -> Dict[int, Dict[str, Any]]:
     """Download the pro driver list from ``PRO_LIST_URL`` and cache it.
 
-    Returns a dictionary mapping ``UserID`` to ``Name``.  If the
-    download fails, the function falls back to whatever is stored in
-    the local cache.
+    Returns a dictionary mapping ``UserID`` to a dictionary with
+    ``Name`` and ``Description``.  If the download fails, the function
+    falls back to whatever is stored in the local cache.
     """
     try:
         response = requests.get(PRO_LIST_URL, timeout=10)
         response.raise_for_status()
         data = response.json()
-        pro_map: Dict[int, str] = {}
+        pro_map: Dict[int, Dict[str, Any]] = {}
         for item in data:
             try:
                 uid = int(item["UserID"])
                 name = str(item["Name"])
-                pro_map[uid] = name
+                desc = str(item.get("Description", ""))
+                pro_map[uid] = {"Name": name, "Description": desc}
             except (KeyError, ValueError, TypeError):
                 continue
         # Cache the list and update timestamp
@@ -115,7 +134,7 @@ def fetch_and_cache_pro_list() -> Dict[int, str]:
         return _read_cache()
 
 
-def get_pro_list(force_refresh: bool = False) -> Dict[int, str]:
+def get_pro_list(force_refresh: bool = False) -> Dict[int, Dict[str, Any]]:
     """Return the pro driver map, refreshing from remote if needed.
 
     By default this function checks whether 24 hours have elapsed
@@ -146,4 +165,20 @@ def get_pro_name(user_id: int) -> str:
     empty string is returned.
     """
     pro_map = get_pro_list()
-    return pro_map.get(int(user_id), "")
+    entry = pro_map.get(int(user_id))
+    if entry:
+        return entry.get("Name", "")
+    return ""
+
+
+def get_pro_description(user_id: int) -> str:
+    """Return the description of the pro driver with the given ``user_id``.
+
+    If the user is not a pro driver or the description is unavailable,
+    an empty string is returned.
+    """
+    pro_map = get_pro_list()
+    entry = pro_map.get(int(user_id))
+    if entry:
+        return entry.get("Description", "")
+    return ""

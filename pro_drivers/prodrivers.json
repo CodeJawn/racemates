@@ -1,4 +1,11 @@
 [
-    {"UserID": 342741, "Name": "Charles Leclerc"},
-    {"UserID": 398273, "Name": "Gabriel Bortoleto"},
+    {"UserID": 342741, "Name": "Charles Leclerc", "Description": "F1"},
+    {"UserID": 398273, "Name": "Gabriel Bortoleto", "Description": "F1"},
+    {"UserID": 453320, "Name": "Kimi Antonelli", "Description": "F1"},
+    {"UserID": 130979, "Name": "Lando Norris", "Description": "F1"},
+    {"UserID": 183738, "Name": "Liam Lawson", "Description": "F1"},
+    {"UserID": 168966, "Name": "Max Verstappen", "Description": "F1"},
+    {"UserID": 371595, "Name": "Ollie Bearman", "Description": "F1"},
+    {"UserID": 60144, "Name": "Oscar Piastri", "Description": "F1"},
+    {"UserID": 79787, "Name": "Zak Brown", "Description": "McLaren F1 CEO"}
   ]

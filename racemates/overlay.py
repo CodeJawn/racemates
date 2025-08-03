@@ -11,7 +11,7 @@ mouse; its position is persisted between sessions using
 
 from __future__ import annotations
 
-from typing import List, Dict
+from typing import List, Dict, Any
 
 from PySide6.QtCore import Qt, QPoint
 from PySide6.QtWidgets import (
@@ -30,7 +30,9 @@ class OverlayWindow(QWidget):
     """A frameless, draggable overlay listing professional drivers."""
 
     def __init__(self) -> None:
-        super().__init__(flags=Qt.FramelessWindowHint | Qt.WindowStaysOnTopHint | Qt.Tool)
+        super().__init__(
+            flags=Qt.FramelessWindowHint | Qt.WindowStaysOnTopHint | Qt.Tool
+        )
         # Transparent background and no window shadows
         self.setAttribute(Qt.WA_TranslucentBackground, True)
         self.setWindowFlag(Qt.WindowDoesNotAcceptFocus, True)
@@ -75,11 +77,13 @@ class OverlayWindow(QWidget):
             screen = QApplication.primaryScreen()
             if screen:
                 rect = screen.availableGeometry()
-                x = rect.right() - self.width() - 20
+                # Use a small width estimate; adjust after first update
+                w = 200
+                x = rect.right() - w - 20
                 y = rect.top() + 20
                 self.move(x, y)
 
-    def update_pro_drivers(self, pro_drivers: List[Dict[str, object]]) -> None:
+    def update_pro_drivers(self, pro_drivers: List[Dict[str, Any]]) -> None:
         """Update the list of professional drivers shown in the overlay."""
         self.list_widget.clear()
         if not pro_drivers:
@@ -89,8 +93,19 @@ class OverlayWindow(QWidget):
         else:
             for drv in pro_drivers:
                 name = drv.get("Name", "")
+                desc = drv.get("Description", "")
                 car_num = drv.get("CarNumber", "")
-                text = f"{car_num} – {name}" if car_num else name
+                parts = []
+                if car_num:
+                    parts.append(car_num)
+                if name:
+                    parts.append(name)
+                if desc:
+                    parts.append(f"({desc})")
+                text = " – ".join(parts[:2])  # join car number and name with dash
+                if desc:
+                    # Append description separated by space
+                    text = f"{text} {desc}"
                 item = QListWidgetItem(text)
                 item.setForeground(Qt.yellow)
                 self.list_widget.addItem(item)
@@ -101,7 +116,9 @@ class OverlayWindow(QWidget):
     def mousePressEvent(self, event) -> None:
         if event.button() == Qt.LeftButton:
             self._dragging = True
-            self._drag_start_pos = event.globalPosition().toPoint() - self.frameGeometry().topLeft()
+            self._drag_start_pos = (
+                event.globalPosition().toPoint() - self.frameGeometry().topLeft()
+            )
             event.accept()
         else:
             super().mousePressEvent(event)

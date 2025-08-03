@@ -1,30 +1,36 @@
 # RaceMates Overlay Application
 
-RaceMates is a lightweight Windows overlay for **iRacing** that tells you when you are racing alongside professional drivers.  It listens to live telemetry via the iRacing SDK to detect when your car is on track and, when a race session is active, displays a small list of any pro drivers sharing the session.  The list of pros is maintained externally as a JSON file and cached locally.
+RaceMates is a lightweight Windows overlay for **iRacing** that tells you when you are racing alongside professional drivers.  It listens to live telemetry via the iRacing SDK to detect when your car is on track and, when a race session is active, displays a small list of any pro drivers sharing the session along with a short description for each driver.
 
-This repository contains the source code of RaceMates as a modular Python package.  The application uses the open‑source [`pyirsdk`](https://pypi.org/project/pyirsdk/) library to consume iRacing telemetry and [`PySide6`](https://pypi.org/project/PySide6/) for the graphical overlay.
+The application uses the open‑source [`pyirsdk`](https://pypi.org/project/pyirsdk/) library to consume iRacing telemetry and [`PySide6`](https://pypi.org/project/PySide6/) for the graphical overlay.  The list of professional drivers is maintained externally as a JSON file hosted on GitHub and is cached locally.
 
 ## Features
 
 * **Automatic overlay** – The overlay appears only when you are in a race session and your car is on track (using the `IsOnTrack` telemetry variable【284833693424139†L38-L45】) and hides otherwise.
-* **Professional driver detection** – RaceMates reads the `DriverInfo` array from iRacing’s telemetry, which contains `UserID` and `UserName` fields for each driver【137150626052293†L145-L152】【137150626052293†L246-L249】.  These IDs are cross‑referenced against a remote list of pro drivers to decide who to display.
-* **Unobtrusive UI** – The overlay is a frameless, always‑on‑top window with a transparent background.  It lists pro drivers’ names (and optionally car numbers) in a dark box and highlights them in yellow.  If no pro drivers are present it shows “No pro drivers in session”.  You can drag the overlay anywhere on the screen; its position persists between runs.
+* **Professional driver detection** – RaceMates reads the `DriverInfo.Drivers` array from iRacing’s telemetry, which contains `UserID` and `UserName` fields for each driver【137150626052293†L145-L152】【137150626052293†L246-L249】.  These IDs are cross‑referenced against a remote list of pro drivers to decide who to display.
+* **Driver descriptions** – Each pro driver in your list can include a short description (e.g. `F1`, `Nascar`, `F2`).  The overlay shows this description after the driver’s name.
+* **Unobtrusive UI** – The overlay is a frameless, always‑on‑top window with a transparent background.  It lists pro drivers’ car numbers and names in a dark box and highlights them in yellow.  If no pro drivers are present it shows “No pro drivers in session”.  You can drag the overlay anywhere on the screen; its position persists between runs.
 * **Cached pro list** – Pro driver information is fetched from a JSON file hosted on GitHub (or another web service) once every 24 hours and cached on disk.  If the network is unavailable, the cached list is used.
 * **Portable or installed** – The application can be run directly from source or packaged into a standalone executable using PyInstaller.
 
 ## Directory structure
 
 ```
-racemates/           # Python package implementing the app
-├── __init__.py
-├── main.py          # Entry point for launching the overlay
-├── config_manager.py# Persists window position and timestamps
-├── prolist_manager.py# Fetches and caches the list of pro drivers
-├── telemetry_listener.py# Reads telemetry from iRacing via pyirsdk
-└── overlay.py       # Implements the draggable overlay window
-
-README.md            # This file
-requirements.txt     # Python dependencies
+your-project/
+│
+├── README.md             # Setup, usage and testing instructions
+├── requirements.txt      # Python dependencies
+│
+├── racemates/            # The Python package implementing RaceMates
+│   ├── __init__.py
+│   ├── main.py           # Entry point used when running as a module
+│   ├── config_manager.py
+│   ├── overlay.py        # Overlay UI implementation
+│   ├── prolist_manager.py# Fetches and caches pro driver list (with descriptions)
+│   └── telemetry_listener.py# Reads telemetry from iRacing via pyirsdk
+│
+└── scripts/
+    └── list_drivers.py   # Helper script to list all drivers in a session
 ```
 
 ## Getting started
@@ -56,16 +62,17 @@ requirements.txt     # Python dependencies
 
    ```json
    [
-     {"UserID": 123456, "Name": "John Doe"},
-     {"UserID": 789012, "Name": "Jane Smith"}
+     {"UserID": 123456, "Name": "John Doe", "Description": "F1"},
+     {"UserID": 789012, "Name": "Jane Smith", "Description": "Past F1"}
    ]
    ```
 
-   You can host this file in a GitHub repository (e.g. `https://raw.githubusercontent.com/<username>/<repo>/main/prodrivers.json`).  GitHub’s raw file hosting supports moderate traffic and is free, making it suitable for a few thousand users.
+   You can host this file in a GitHub repository (e.g. `https://raw.githubusercontent.com/CodeJawn/racemates/refs/heads/main/pro_drivers/prodrivers.json`).  GitHub’s raw file hosting supports moderate traffic and is free, making it suitable for a few thousand users.
 
 6. **Run the application**:
 
    ```sh
+   # From the directory containing the 'racemates' folder
    python -m racemates.main
    ```
 
@@ -75,7 +82,7 @@ requirements.txt     # Python dependencies
 
 It’s unlikely to encounter a professional driver in every session.  To test RaceMates locally you can:
 
-1. **Identify a driver** – Join any session and use the `scripts/list_drivers.py` script to list all drivers currently in your session along with their `UserID` and `UserName`.  For example:
+1. **Identify a driver** – Join any session and use the `scripts/list_drivers.py` script to list all drivers currently in your session along with their `UserID` and `UserName`:
 
    ```sh
    python scripts/list_drivers.py
@@ -87,11 +94,11 @@ It’s unlikely to encounter a professional driver in every session.  To test Ra
    CarIdx=5, UserID=123456, Name='Random Racer', CarNumber='12', CarClass='NASCAR Xfinity'
    ```
 
-2. **Add the driver to your pro list** – Edit the JSON file on your GitHub repository (referenced by `PRO_LIST_URL`) and add an entry for this driver:
+2. **Add the driver to your pro list** – Edit the JSON file on your GitHub repository (referenced by `PRO_LIST_URL`) and add an entry for this driver with a description:
 
    ```json
    [
-     {"UserID": 123456, "Name": "Random Racer"},
+     {"UserID": 123456, "Name": "Random Racer", "Description": "Test"},
      ...
    ]
    ```
@@ -102,7 +109,7 @@ It’s unlikely to encounter a professional driver in every session.  To test Ra
    python -m racemates.main --refresh-pro
    ```
 
-   The overlay should now display “Random Racer” when you are in session with that driver, allowing you to verify that everything works.
+   The overlay should now display “Random Racer Test” when you are in session with that driver, allowing you to verify that everything works.
 
 ## Packaging as a standalone executable
 
@@ -133,10 +140,11 @@ To have RaceMates start automatically when Windows boots, you can create a short
 The code is modular and intended for clarity and ease of modification:
 
 * **`telemetry_listener.py`** – Responsible for connecting to iRacing via `pyirsdk`, monitoring session state, and emitting Qt signals with pro driver lists.  It runs on a background thread and checks the `SessionState` variable to see when the session is `4` (race)【284833693424139†L38-L45】 and `IsOnTrack` to ensure the player is on track.  It extracts the `UserID`/`UserName` fields from `DriverInfo.Drivers`【137150626052293†L145-L152】.
-* **`prolist_manager.py`** – Downloads the pro driver list from a remote JSON file and caches it locally.  It refreshes the cache once per day by default.  The cache and last update timestamp are stored in the same directory as other configuration files.
+* **`prolist_manager.py`** – Downloads the pro driver list (including descriptions) from a remote JSON file and caches it locally.  It refreshes the cache once per day by default.  The cache and last update timestamp are stored in the same directory as other configuration files.
 * **`config_manager.py`** – Handles reading and writing configuration data (window position and last pro list refresh time) to a JSON file.  On Windows it stores data under `%APPDATA%\RaceMates`.
 * **`overlay.py`** – Implements the transparent overlay using PySide6.  It listens for driver list updates and updates its UI accordingly.  The overlay can be dragged anywhere; releasing the mouse saves the new position via `config_manager`.
 * **`main.py`** – Parses command‑line arguments, sets up the application and its components, and starts the Qt event loop.  Pass `--refresh-pro` to force an immediate refresh of the pro driver list on startup.
+* **`scripts/list_drivers.py`** – Utility script to list all drivers in the current iRacing session, useful for building or testing your pro driver list.
 
 If you wish to contribute or extend the project (e.g. add a settings dialog, more visual customisation, or integration with other sims), please open a pull request.
 
